@@ -12,5 +12,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             UserSeeder::class, // 👈 este debe estar agregado
         ]);
+
+        $this->call(\Database\Seeders\HelpdeskLookupsSeeder::class);
     }
 }

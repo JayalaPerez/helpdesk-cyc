@@ -46,8 +46,20 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-     public function isAdmin(): bool
+
+    /**
+     * Verifica si el usuario tiene rol de administrador.
+     */
+    public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    /**
+     * Nombre visible del usuario (nombre si existe, o email como respaldo).
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->name ?: $this->email;
     }
 }
