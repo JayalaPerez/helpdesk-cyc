@@ -33,10 +33,12 @@
         {{ __('Detalle del Ticket') }}
       </h2>
 
-      <a href="{{ $backUrl }}"
-         class="inline-flex items-center rounded-xl bg-[#0a2342] px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 transition">
-        ← Volver
-      </a>
+    <a href="{{ route('dashboard') }}"
+      class="inline-flex items-center rounded-xl bg-[#0a2342] px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 transition">
+      ← Volver
+    </a>
+
+
     </div>
   </x-slot>
 
