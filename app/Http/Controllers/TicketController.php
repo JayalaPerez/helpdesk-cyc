@@ -74,7 +74,7 @@ class TicketController extends Controller
             'priority'    => ['required', Rule::in($priorities)],
             'description' => 'required|string',
             'category'    => ['nullable','string','max:255'],
-            'attachment'  => ['nullable', 'file', 'max:25600','mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,zip,eml,msg'], // 25MB
+            'attachment'  => ['nullable', 'file', 'max:25600','mimes:pdf,jpg,jpeg,png,doc,docx,xlsx,zip,eml,msg','mimetypes:application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip,message/rfc822'], // 25MB
         ]);
 
         // Normalizamos vacíos

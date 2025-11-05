@@ -22,4 +22,19 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+    # 🔒 Bloquear ejecución de PHP en storage y subcarpetas
+    <Directory "storage">
+        <FilesMatch "\.php$">
+            Deny from all
+        </FilesMatch>
+    </Directory>
+
+    # 🔒 Bloquear PHP también en /public/storage
+    <Directory "public/storage">
+        <FilesMatch "\.php$">
+            Deny from all
+        </FilesMatch>
+    </Directory>
+
 </IfModule>
