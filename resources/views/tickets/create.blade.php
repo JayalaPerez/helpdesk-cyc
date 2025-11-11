@@ -52,8 +52,8 @@
                                 class="w-full border rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-200"
                             >
                                 <option value="">Seleccione departamento</option>
-                                @foreach(config('helpdesk.departments', []) as $d)
-                                    <option value="{{ $d }}" @selected(old('department')===$d)>
+                                @foreach($departments as $d)
+                                    <option value="{{ $d }}" @selected(old('department') === $d)>
                                         {{ $d }}
                                     </option>
                                 @endforeach
@@ -69,8 +69,8 @@
                                 class="w-full border rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-200"
                             >
                                 <option value="">Seleccione categoría</option>
-                                @foreach(config('helpdesk.categories', []) as $c)
-                                    <option value="{{ $c }}" @selected(old('category')===$c)>
+                                @foreach($categories as $c)
+                                    <option value="{{ $c }}" @selected(old('category') === $c)>
                                         {{ $c }}
                                     </option>
                                 @endforeach
@@ -88,8 +88,8 @@
                             required
                             class="w-full border rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-200"
                         >
-                            @foreach(config('helpdesk.priorities', []) as $p)
-                                <option value="{{ $p }}" @selected(old('priority')===$p)>
+                            @foreach($priorities as $p)
+                                <option value="{{ $p }}" @selected(old('priority') === $p)>
                                     {{ $p }}
                                 </option>
                             @endforeach
@@ -145,3 +145,4 @@
         </div>
     </div>
 </x-app-layout>
+

@@ -33,12 +33,10 @@
         {{ __('Detalle del Ticket') }}
       </h2>
 
-    <a href="{{ route('dashboard') }}"
-      class="inline-flex items-center rounded-xl bg-[#0a2342] px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 transition">
-      ← Volver
-    </a>
-
-
+      <a href="{{ route('dashboard') }}"
+        class="inline-flex items-center rounded-xl bg-[#0a2342] px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 transition">
+        ← Volver
+      </a>
     </div>
   </x-slot>
 
@@ -77,13 +75,13 @@
               </span>
               · {{ $ticket->department ?? 'Sin depto.' }}
               @if($ticket->category)
-              · {{ $ticket->category }}
+                · {{ $ticket->category }}
               @endif
               @if($ticket->assignee)
-              · Asignado: <span class="font-semibold text-[#0a2342]">{{ $ticket->assignee->display_name }}</span>
+                · Asignado: <span class="font-semibold text-[#0a2342]">{{ $ticket->assignee->display_name }}</span>
               @endif
               @if($ticket->closed_at)
-              · Cerrado: {{ $ticket->closed_at->format('d-m-Y H:i') }}
+                · Cerrado: {{ $ticket->closed_at->format('d-m-Y H:i') }}
               @endif
             </div>
           </div>
@@ -151,21 +149,26 @@
 
         <div class="grid gap-3">
           @forelse($ticket->comments as $c)
-            <div class="rounded-xl border border-gray-100 p-3">
-              <div class="text-xs text-gray-500 flex flex-wrap items-center gap-2">
-                <span class="font-medium text-gray-700">{{ $c->author?->display_name }}</span>
-                <span>· {{ $c->created_at->format('d-m-Y H:i') }}</span>
+            <div class="rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <div class="flex items-start justify-between gap-3 mb-1">
+                <div>
+                  <span class="font-semibold text-[#0a2342]">
+                    {{ $c->author?->display_name }}
+                  </span>
+                  <span class="text-xs text-gray-500 ml-2">
+                    {{ $c->created_at->format('d-m-Y H:i') }}
+                  </span>
+                </div>
 
                 @if($c->attachment_path)
-                  <span class="text-gray-400">·</span>
                   <a href="{{ route('comments.download', $c) }}"
                      class="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline">
-                     📎 {{ $c->attachment_name ?? 'Archivo adjunto' }}
+                    📎 {{ $c->attachment_name ?? 'Archivo adjunto' }}
                   </a>
                 @endif
               </div>
 
-              <div class="mt-1 text-sm text-gray-800 whitespace-pre-line">
+              <div class="pl-1 text-sm text-gray-800 whitespace-pre-line">
                 {{ $c->body }}
               </div>
             </div>
@@ -185,9 +188,9 @@
           <div class="flex-1 min-w-[250px]">
             <label class="block text-sm font-medium text-gray-700 mb-1">Comentario</label>
             <input name="body"
-                  class="w-full border rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-200"
-                  placeholder="Escribe un comentario..."
-                  required>
+                   class="w-full border rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-200"
+                   placeholder="Escribe un comentario..."
+                   required>
           </div>
 
           {{-- Archivo --}}
@@ -213,3 +216,4 @@
     </div>
   </div>
 </x-app-layout>
+

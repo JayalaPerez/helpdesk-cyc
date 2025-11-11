@@ -13,7 +13,9 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\PasswordEntryController; // 👈 NUEVO
 
 // Landing
-Route::get('/', fn () => view('welcome'));
+Route::get('/', function (){
+	return redirect()->route('login');
+});
 
 // Dashboard (requiere login + verificación)
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -24,9 +26,9 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 Route::middleware('auth')->group(function () {
 
     // Perfil
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    //Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    //Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    //Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Tickets (CRUD)
     Route::resource('tickets', TicketController::class);
