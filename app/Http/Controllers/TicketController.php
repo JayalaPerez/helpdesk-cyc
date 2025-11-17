@@ -10,6 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 
+// Mails
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TicketCreatedMail;
+use App\Mail\TicketUpdatedMail;
+
+// Logs
+use Illuminate\Support\Facades\Log;
+
 class TicketController extends Controller
 {
     public function index()
@@ -119,7 +127,18 @@ class TicketController extends Controller
             ]);
         }
 
-        // IMPORTANTE: devolver al show del ticket recién creado
+        // ======= CORREOS: NUEVO TICKET =======
+        try {
+            $ticket->load('requester');
+            Mail::to('informatica@consultorescyc.cl')->send(new TicketCreatedMail($ticket));
+            if (!empty($ticket->requester?->email)) {
+                Mail::to($ticket->requester->email)->send(new TicketCreatedMail($ticket));
+            }
+        } catch (\Throwable $e) {
+            report($e); // no interrumpas la UX si falla SMTP
+        }
+
+        // Ir al show del ticket recién creado
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('ok', 'Ticket creado correctamente');
@@ -149,7 +168,8 @@ class TicketController extends Controller
 
     public function edit(Ticket $ticket)
     {
-        if (auth()->id() !== $ticket->user_id && !auth()->user()->isAdmin()) {
+        // dueña del ticket o admin
+        if ((int) auth()->id() !== (int) $ticket->user_id && !auth()->user()->isAdmin()) {
             abort(403);
         }
 
@@ -162,7 +182,8 @@ class TicketController extends Controller
 
     public function update(Request $request, Ticket $ticket)
     {
-        if (auth()->id() !== $ticket->user_id && !auth()->user()->isAdmin()) {
+        // dueña del ticket o admin
+        if ((int) auth()->id() !== (int) $ticket->user_id && !auth()->user()->isAdmin()) {
             abort(403);
         }
 
@@ -242,13 +263,54 @@ class TicketController extends Controller
 
         $statuses = config('helpdesk.statuses', ['Nuevo', 'En Progreso', 'Resuelto', 'Cerrado']);
 
+        Log::info('updateStatus() FIRING', [
+            'ticket_id' => $ticket->id,
+            'by_user'   => auth()->id(),
+            'payload'   => $request->only(['status']),
+        ]);
+
         $data = $request->validate([
             'status' => ['required', Rule::in($statuses)],
+        ]);
+
+        Log::info('updateStatus() VALIDATED - ABOUT TO SAVE', [
+            'ticket_id' => $ticket->id,
+            'new_status' => $data['status'],
         ]);
 
         $ticket->status = $data['status'];
         $ticket->closed_at = ($data['status'] === 'Cerrado') ? now() : null;
         $ticket->save();
+
+        Log::info('updateStatus() SAVED', [
+            'ticket_id' => $ticket->id,
+            'status'    => $ticket->status,
+            'closed_at' => $ticket->closed_at,
+        ]);
+
+        // ======= CORREOS: cambio de estado =======
+        try {
+            $ticket->load('requester', 'assignee');
+
+            Log::info('updateStatus() ABOUT TO MAIL', [
+                'ticket_id'       => $ticket->id,
+                'requester_email' => optional($ticket->requester)->email,
+                'assignee_email'  => optional($ticket->assignee)->email,
+            ]);
+
+            $line = 'El ticket cambió de estado a: '.$ticket->status.'.';
+
+            if (!empty($ticket->requester?->email)) {
+                Mail::to($ticket->requester->email)->send(new TicketUpdatedMail($ticket, $line));
+            }
+            if ($ticket->assignee) {
+                Mail::to($ticket->assignee->email)->send(new TicketUpdatedMail($ticket, $line));
+            }
+
+            Log::info('updateStatus() MAIL DONE', ['ticket_id' => $ticket->id]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return back()->with('ok', 'Estado actualizado');
     }
@@ -259,12 +321,54 @@ class TicketController extends Controller
             abort(403);
         }
 
+        Log::info('assign() FIRING', [
+            'ticket_id' => $ticket->id,
+            'by_user'   => auth()->id(),
+            'payload'   => $request->only(['assigned_user_id']),
+        ]);
+
         $data = $request->validate([
             'assigned_user_id' => 'nullable|exists:users,id',
         ]);
 
+        Log::info('assign() VALIDATED - ABOUT TO SAVE', [
+            'ticket_id' => $ticket->id,
+            'new_assigned_user_id' => $data['assigned_user_id'] ?? null,
+        ]);
+
         $ticket->assigned_user_id = $data['assigned_user_id'] ?? null;
         $ticket->save();
+
+        Log::info('assign() SAVED', [
+            'ticket_id' => $ticket->id,
+            'assigned_user_id' => $ticket->assigned_user_id,
+        ]);
+
+        // ======= CORREOS: asignación =======
+        try {
+            $ticket->load('requester', 'assignee');
+
+            Log::info('assign() ABOUT TO MAIL', [
+                'ticket_id'       => $ticket->id,
+                'requester_email' => optional($ticket->requester)->email,
+                'assignee_email'  => optional($ticket->assignee)->email,
+            ]);
+
+            $line = $ticket->assignee
+                ? 'El ticket fue asignado a: '.$ticket->assignee->name.'.'
+                : 'El ticket quedó sin asignación.';
+
+            if (!empty($ticket->requester?->email)) {
+                Mail::to($ticket->requester->email)->send(new TicketUpdatedMail($ticket, $line));
+            }
+            if ($ticket->assignee) {
+                Mail::to($ticket->assignee->email)->send(new TicketUpdatedMail($ticket, $line));
+            }
+
+            Log::info('assign() MAIL DONE', ['ticket_id' => $ticket->id]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return back()->with('ok', 'Ticket asignado');
     }
@@ -277,15 +381,58 @@ class TicketController extends Controller
 
         $statuses = config('helpdesk.statuses', ['Nuevo', 'En Progreso', 'Resuelto', 'Cerrado']);
 
+        Log::info('adminUpdate() FIRING', [
+            'ticket_id' => $ticket->id,
+            'by_user'   => auth()->id(),
+            'payload'   => $request->only(['status','assigned_user_id']),
+        ]);
+
         $data = $request->validate([
             'status'           => ['required', Rule::in($statuses)],
             'assigned_user_id' => ['nullable', 'exists:users,id'],
+        ]);
+
+        Log::info('adminUpdate() VALIDATED - ABOUT TO SAVE', [
+            'ticket_id' => $ticket->id,
+            'new_status' => $data['status'],
+            'new_assigned_user_id' => $data['assigned_user_id'] ?? null,
         ]);
 
         $ticket->status = $data['status'];
         $ticket->closed_at = ($data['status'] === 'Cerrado') ? now() : null;
         $ticket->assigned_user_id = $data['assigned_user_id'] ?? null;
         $ticket->save();
+
+        Log::info('adminUpdate() SAVED', [
+            'ticket_id' => $ticket->id,
+            'status'    => $ticket->status,
+            'assigned_user_id' => $ticket->assigned_user_id,
+            'closed_at' => $ticket->closed_at,
+        ]);
+
+        // ======= CORREOS: actualización combinada (estado/asignación) =======
+        try {
+            $ticket->load('requester', 'assignee');
+
+            Log::info('adminUpdate() ABOUT TO MAIL', [
+                'ticket_id'       => $ticket->id,
+                'requester_email' => optional($ticket->requester)->email,
+                'assignee_email'  => optional($ticket->assignee)->email,
+            ]);
+
+            $line = 'El ticket fue actualizado. Estado actual: '.$ticket->status.'.';
+
+            if (!empty($ticket->requester?->email)) {
+                Mail::to($ticket->requester->email)->send(new TicketUpdatedMail($ticket, $line));
+            }
+            if ($ticket->assignee) {
+                Mail::to($ticket->assignee->email)->send(new TicketUpdatedMail($ticket, $line));
+            }
+
+            Log::info('adminUpdate() MAIL DONE', ['ticket_id' => $ticket->id]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return back()->with('ok', 'Ticket actualizado');
     }

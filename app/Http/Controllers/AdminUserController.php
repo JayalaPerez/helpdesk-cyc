@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AdminUserController extends Controller
 {
@@ -41,13 +42,10 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Formulario de ediciÃ³n separado.
+     * Formulario de edici¨®n separado.
      */
     public function edit(User $user)
     {
-        // Si no tienes una vista aparte, esto darÃ¡ error.
-        // Puedes crear resources/views/admin/users/edit.blade.php
-        // o simplemente redirigir al dashboard.
         return view('admin.users.edit', compact('user'));
     }
 
@@ -64,7 +62,7 @@ class AdminUserController extends Controller
         ]);
 
         // Evitar que el admin cambie su propio rol
-        if ($user->id === auth()->id()) {
+        if ((int) $user->id === (int) auth()->id()) {
             unset($data['role']);
         }
 
@@ -84,12 +82,48 @@ class AdminUserController extends Controller
      */
     public function destroy(User $user)
     {
-        if ($user->id === auth()->id()) {
+        $current = auth()->user();
+
+        // Solo un admin puede eliminar usuarios
+        if (!$current || !$current->isAdmin()) {
+            abort(403);
+        }
+
+        // Evitar que un admin se elimine a s¨ª mismo
+        if ((int) $user->id === (int) $current->id) {
             return back()->with('error', 'No puedes eliminar tu propio usuario.');
         }
 
-        $user->delete();
+        // Contar relaciones (por seguridad; si realmente no tiene, ser¨¢n 0)
+        $ticketsCreados  = $user->ticketsCreated()->count();
+        $ticketsAsignado = $user->ticketsAssigned()->count();
+        $comentarios     = $user->comments()->count();
+
+        if ($ticketsCreados > 0 || $ticketsAsignado > 0 || $comentarios > 0) {
+            $msg = 'No se puede eliminar al usuario porque tiene registros asociados: '
+                . $ticketsCreados . ' ticket(s) creados, '
+                . $ticketsAsignado . ' ticket(s) asignado(s) y '
+                . $comentarios . ' comentario(s).';
+
+            return back()->with('error', $msg);
+        }
+
+        try {
+            $user->delete();
+        } catch (\Throwable $e) {
+            Log::error('Error al eliminar usuario en AdminUserController@destroy', [
+                'user_to_delete_id' => $user->id,
+                'current_user_id'   => $current->id,
+                'exception'         => $e->getMessage(),
+            ]);
+
+            return back()->with(
+                'error',
+                'No se pudo eliminar el usuario (revisa el log para m¨¢s detalles).'
+            );
+        }
 
         return back()->with('ok', 'Usuario eliminado correctamente.');
     }
 }
+

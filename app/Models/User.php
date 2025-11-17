@@ -21,7 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role'
+        'role',
     ];
 
     /**
@@ -52,6 +52,7 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
+        // IMPORTANTE: la BD debe tener exactamente 'admin'
         return $this->role === 'admin';
     }
 
@@ -61,5 +62,29 @@ class User extends Authenticatable
     public function getDisplayNameAttribute(): string
     {
         return $this->name ?: $this->email;
+    }
+
+    /**
+     * Tickets creados por este usuario.
+     */
+    public function ticketsCreated()
+    {
+        return $this->hasMany(\App\Models\Ticket::class, 'user_id');
+    }
+
+    /**
+     * Tickets asignados a este usuario.
+     */
+    public function ticketsAssigned()
+    {
+        return $this->hasMany(\App\Models\Ticket::class, 'assigned_user_id');
+    }
+
+    /**
+     * Comentarios hechos por este usuario.
+     */
+    public function comments()
+    {
+        return $this->hasMany(\App\Models\Comment::class, 'user_id');
     }
 }
